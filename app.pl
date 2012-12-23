@@ -37,9 +37,9 @@ any ['GET','POST'] => '/s2t' => sub {
     }
     $text = decode_utf8 $text;
 
-    $self->app->log->debug("Text: $text");
-
+    $self->res->headers->header('Access-Control-Request-Method' => 'GET, POST, OPTIONS');
     $self->res->headers->header('Access-Control-Allow-Origin' => '*');
+    $self->res->headers->header('Access-Control-Allow-Headers' => 'Content-Type');
     $self->render_text(text => $self->s2t($text));
 };
 
@@ -66,37 +66,50 @@ __DATA__
 
 @@ bs2t.js.ep
 (function() {
+    var allTextNodes = [];
 
-function replaceText(node) {
-  var current = node.nodeValue;
-  if (current.match(/^\s*$/)) return;
+    function replaceAllText() {
+        var i, len, arr, client, arrText;
+        len = allTextNodes.length;
+        arr = [];
+        for(i = 0; i < len; i++) {
+            arr.push( allTextNodes[i].nodeValue );
+        }
+        arrText = JSON.stringify(arr);
+        client = new XMLHttpRequest();
+        client.open("POST", "http://<%= $hostname %>/s2t", true);
+        client.onload = function() {
+            var texts, len;
+            if (client.status != 200 && client.status != 304) { return; }
+            texts = JSON.parse(client.responseText);
+            len = allTextNodes.length;
+            for(i = 0; i < len; i++) {
+                allTextNodes[i].nodeValue = texts[i];
+            }
+        };
+        client.send(arrText);
+    }
 
-  var client = new XMLHttpRequest();
-  client.open("GET", "http://<%= $hostname %>/s2t?t=" + encodeURI(current), true);
-  client.onload = function() {
-    if (client.status != 200 && client.status != 304) { return; }
-    node.nodeValue = client.responseText;
-  };
-  client.send();
-}
+    function traverse(node) {
+        var children, childLen;
 
-function traverse(node) {
-  var children, childLen;
+        if (!node.tagName || node.tagName.match(/^(script|style|link|embed|object|img)$/i)) return;
 
-  if (!node.tagName || node.tagName.match(/^(script|style|link|embed|object|img)$/i)) return;
+        children = node.childNodes;
+        childLen = children.length;
 
-  children = node.childNodes;
-  childLen = children.length;
+        for(var i = 0; i < childLen; i++) {
+            var child = children.item(i);
+            if(child.nodeType == 3) {
+                if(child.nodeValue.match(/^\s*$/) == null) {
+                    allTextNodes.push(child);
+                }
+            } else {
+                traverse(child);
+            }
+        }
+    }
 
-  for(var i = 0; i < childLen; i++)
-  {
-    var child = children.item(i);
-    if(child.nodeType == 3)//or if(child instanceof Text)
-      replaceText(child);
-    else
-      traverse(child);
-  }
-}
-
-traverse(document.body);
-})();
+    traverse(document.body);
+    replaceAllText();
+)}();

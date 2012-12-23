@@ -69,35 +69,30 @@ __DATA__
     var allTextNodes = [];
 
     function replaceAllText() {
-        var i, len, arr, client, arrText;
+        var i, len, texts, client;
         len = allTextNodes.length;
-        arr = [];
+        texts = [];
         for(i = 0; i < len; i++) {
-            arr.push( allTextNodes[i].nodeValue );
+            texts.push( allTextNodes[i].nodeValue );
         }
-        arrText = JSON.stringify(arr);
         client = new XMLHttpRequest();
         client.open("POST", "http://<%= $hostname %>/s2t", true);
         client.onload = function() {
-            var texts, len;
-            if (client.status != 200 && client.status != 304) { return; }
+            var texts;
+            if (client.status != 200 && client.status != 304) return;
             texts = JSON.parse(client.responseText);
-            len = allTextNodes.length;
             for(i = 0; i < len; i++) {
                 allTextNodes[i].nodeValue = texts[i];
             }
         };
-        client.send(arrText);
+        client.send( JSON.stringify(texts) );
     }
 
     function traverse(node) {
         var children, childLen;
-
         if (!node.tagName || node.tagName.match(/^(script|style|link|embed|object|img)$/i)) return;
-
         children = node.childNodes;
         childLen = children.length;
-
         for(var i = 0; i < childLen; i++) {
             var child = children.item(i);
             if(child.nodeType == 3) {
@@ -112,4 +107,4 @@ __DATA__
 
     traverse(document.body);
     replaceAllText();
-}();
+})();

@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use v5.10;
 use Mojolicious::Lite;
-
+use Encode qw(decode_utf8);
 use Data::HanConvert::cn2tw;
 use Data::HanConvert::cn2tw_characters;
 use Convert::Moji;
@@ -15,10 +15,16 @@ helper s2t => sub {
 };
 
 
-get '/s2t' => sub {
+any ['GET','POST'] => '/s2t' => sub {
     my $self = shift;
-    my $text = $self->param("t");
-    $self->render_text(text => $self->s2t($text));
+    my $text = $self->param("t") || $self->req->body;
+
+    unless ($text) {
+        return $self->render(text => "Missing input.", status => 400);
+    }
+
+    $self->render_text(text => $self->s2t(decode_utf8 $text));
 };
 
+app->secret("roonbienfleshmentcanoodlerbidimensionalOphidiobatrachiapharyngalgicSyngnathidaelaroidHyperotretisymbologyHoloptychiidae");
 app->start;

@@ -2,8 +2,8 @@
 use ExtUtils::MakeMaker;
 WriteMakefile(
   PREREQ_PM => {
-      'Mojolicious' => '2.98',
-      'Data::HanConvert' => "1.1",
+      'Mojolicious' => '3.69',
+      'Data::HanConvert' => "1.11",
       "Convert::Moji" => "0.05"
   }
 );

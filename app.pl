@@ -112,4 +112,4 @@ __DATA__
 
     traverse(document.body);
     replaceAllText();
-)}();
+}();

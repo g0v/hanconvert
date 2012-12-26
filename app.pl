@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 use v5.10;
 use Mojolicious::Lite;
+use Mojo::UserAgent;
 use Encode qw(decode_utf8);
 use Data::HanConvert::cn2tw;
 use Data::HanConvert::cn2tw_characters;
@@ -12,6 +13,36 @@ helper s2t => sub {
     my $text = shift;
 
     return $text =~ /\p{Han}/ ? $s2t_converter->convert($text) : $text;
+};
+
+helper get_feed => sub {
+    my $self = shift;
+    my $url  = shift;
+
+
+    my $ua = Mojo::UserAgent->new;
+    my $tx = $ua->get($url);
+    my $res = $tx->success or return $self->render(text => "failed to retrieve the url", status => 501);
+
+    my $feed_ct = $res->headers->content_type;
+
+    $self->app->log->debug($feed_ct);
+
+    unless ($feed_ct =~ m{^(text/|application/xml$)}) {
+        return;
+    }
+
+    my $text = $res->body;
+
+    my $encname = qr{[A-Za-z] ([A-Za-z0-9._] | '-')*}x;
+    my $encattr = qr{\sencoding=(["'])($encname)(\1)};
+    $text =~ s/\A([^\n]+\n)//;
+    my $first_line = $1;
+    my (undef, $encoding) = $first_line =~ m/$encattr/;
+
+    $first_line =~ s{$encattr}{ encoding="utf-8"};
+
+    return (Encode::decode($encoding, $first_line) . Encode::decode($encoding, $text), $feed_ct);
 };
 
 
@@ -32,10 +63,21 @@ any ['GET','POST'] => '/s2t' => sub {
     my $self = shift;
     my $text = $self->param("t") || $self->req->body;
 
+    if ($text) {
+        $text = decode_utf8 $text;
+    }
+    elsif (my $url = $self->param("u")) {
+        ($text, my $feed_ct) = $self->get_feed($url);
+        unless ($text && $feed_ct) {
+            $self->render(text => "cannot convert non-text.", status => 501);
+            return;
+        }
+        $self->res->headers->content_type($feed_ct);
+    }
+
     unless ($text) {
         return $self->render(text => "Missing input.", status => 400);
     }
-    $text = decode_utf8 $text;
 
     $self->res->headers->header('Access-Control-Request-Method' => 'GET, POST, OPTIONS');
     $self->res->headers->header('Access-Control-Allow-Origin' => '*');

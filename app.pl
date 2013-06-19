@@ -28,7 +28,7 @@ helper get_feed => sub {
 
     $self->app->log->debug($feed_ct);
 
-    unless ($feed_ct =~ m{^(text/|application/xml$)}) {
+    unless ($feed_ct =~ m{^( text/ | application/(atom\+)?xml )}x) {
         return;
     }
 

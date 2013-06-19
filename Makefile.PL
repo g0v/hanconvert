@@ -2,9 +2,9 @@
 use ExtUtils::MakeMaker;
 WriteMakefile(
   PREREQ_PM => {
-      'Encode' => '2.42',
-      'Mojolicious' => '3.69',
-      'Data::HanConvert' => "1.12",
+      'Encode' => '2.51',
+      'Mojolicious' => '4.16',
+      'Data::HanConvert' => "1.2",
       "Convert::Moji" => "0.05"
   }
 );

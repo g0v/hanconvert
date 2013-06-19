@@ -28,17 +28,28 @@ helper get_feed => sub {
 
     $self->app->log->debug($feed_ct);
 
-    unless ($feed_ct =~ m{^( text/ | application/(atom\+)?xml )}x) {
+    unless ($feed_ct =~ m{^( text/ | application/((atom|rss)\+)?xml )}x) {
         return;
     }
 
     my $text = $res->body;
 
-    my $encname = qr{[A-Za-z] ([A-Za-z0-9._] | '-')*}x;
-    my $encattr = qr{\sencoding=(["'])($encname)(\1)};
-    $text =~ s/\A([^\n]+\n)//;
+    my $encname = qr{[A-Za-z][A-Za-z0-9._-]+};
+    my $encattr = qr{\bencoding=(["'])($encname)(\1)};
+    $text =~ s/\A([^\n]+)\n//;
     my $first_line = $1;
+
+    $self->app->log->debug($first_line);
+
     my (undef, $encoding) = $first_line =~ m/$encattr/;
+
+    unless ($encoding) {
+        $self->app->log->debug("No encoding info");
+    }
+
+    return unless $encoding;
+
+    $self->app->log->debug($encoding);
 
     $first_line =~ s{$encattr}{ encoding="utf-8"};
 
@@ -82,7 +93,7 @@ any ['GET','POST'] => '/s2t' => sub {
     $self->res->headers->header('Access-Control-Request-Method' => 'GET, POST, OPTIONS');
     $self->res->headers->header('Access-Control-Allow-Origin' => '*');
     $self->res->headers->header('Access-Control-Allow-Headers' => 'Content-Type');
-    $self->render_text(text => $self->s2t($text));
+    $self->render(text => $self->s2t($text));
 };
 
 get '/' => sub {

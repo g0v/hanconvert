@@ -2,7 +2,7 @@
 use v5.10;
 use Mojolicious::Lite;
 use Mojo::UserAgent;
-use Encode qw(decode_utf8);
+use Encode ("encode", "decode");
 use Data::HanConvert::cn2tw;
 use Data::HanConvert::cn2tw_characters;
 use Convert::Moji;
@@ -75,7 +75,7 @@ any ['GET','POST'] => '/s2t' => sub {
     my $text = $self->param("t") || $self->req->body;
 
     if ($text) {
-        $text = decode_utf8 $text;
+        $text = decode(utf8 => $text);
     }
     elsif (my $url = $self->param("u")) {
         ($text, my $feed_ct) = $self->get_feed($url);
@@ -96,12 +96,32 @@ any ['GET','POST'] => '/s2t' => sub {
     $self->render(text => $self->s2t($text));
 };
 
+get '/big5_to_utf8/' => sub {
+    my $self = shift;
+    my $url = $self->param("url");
+
+    my $ua = Mojo::UserAgent->new;
+    my $tx = $ua->get($url);
+    my $res = $tx->success or return $self->render(text => "failed to retrieve the url", status => 501);
+    my $text;
+
+    eval {
+        $text = Encode::decode( big5 => $res->body);
+        1;
+    } or do {
+        # decode failed.
+        return $self->render( text => "fail to decode content from big5", status => 501 );
+    };
+
+    $self->render( text => $text );
+};
+
 get '/' => sub {
     my $self = shift;
     $self->stash(hostname => "".$self->req->headers->header("Host"));
 } => 'index';
 
-app->secret("roonbienfleshmentcanoodlerbidimensionalOphidiobatrachiapharyngalgicSyngnathidaelaroidHyperotretisymbologyHoloptychiidae");
+app->secret($$ * time * rand());
 app->start;
 
 __DATA__
